@@ -1,4 +1,35 @@
+import { useMemo, useState } from "react";
+import { InputPanel } from "./components/InputPanel";
+import { ReportPanel } from "./components/ReportPanel";
+import { analyzeOpinion } from "./lib/analyzer";
+import { formatReportText } from "./lib/reportText";
+
+function visibleCharacters(value: string): number {
+  return Array.from(value.replace(/\s/g, "")).length;
+}
+
 export default function App() {
+  const [input, setInput] = useState("");
+  const [copied, setCopied] = useState(false);
+  const result = useMemo(() => analyzeOpinion(input), [input]);
+
+  const copyReport = async () => {
+    if (result.status !== "ready") return;
+
+    try {
+      await navigator.clipboard.writeText(formatReportText(result.report));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const updateInput = (value: string) => {
+    setInput(value);
+    setCopied(false);
+  };
+
   return (
     <main className="app-shell">
       <section className="hero-row">
@@ -10,15 +41,14 @@ export default function App() {
       </section>
 
       <section className="workspace" aria-label="观点体检工作台">
-        <label className="input-shell">
-          <span>输入观点</span>
-          <textarea aria-label="输入观点" placeholder="例如：AI 会替代大多数程序员。" />
-        </label>
-
-        <aside className="empty-report">
-          <h2>等待体检</h2>
-          <p>粘贴一段观点后，这里会显示核心立场、隐藏假设、证据强度和反方视角。</p>
-        </aside>
+        <InputPanel
+          value={input}
+          visibleCharacters={visibleCharacters(input)}
+          onChange={updateInput}
+          onUseExample={updateInput}
+          onClear={() => updateInput("")}
+        />
+        <ReportPanel state={result} copied={copied} onCopy={copyReport} />
       </section>
     </main>
   );
